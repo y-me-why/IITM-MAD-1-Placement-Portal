@@ -10,14 +10,26 @@ def login():
         password = request.form.get("password")
         this_user = User.query.filter_by(email=email).first()
         if this_user.role == "admin" and this_user.password == password:
-            return render_template("admin_dashboard.html")
+            return redirect("/admin_dashboard")
         else:
             if this_user and this_user.password == password:
-                return render_template("dashboard.html")
+                return redirect(url_for("home", user_id = this_user.id))
             else:
                 flash("Invalid credentials")
                 return redirect(url_for("login"))
     return render_template("login.html")
+
+@app.route("/admin_dashboard")
+def admin_dashboard():
+    return render_template("admin_dashboard.html")
+
+@app.route("/home/<int:user_id>")
+def home(user_id):
+    this_user = User.query.filter_by(id=user_id).first()
+    if this_user.role == "student":
+        return render_template("home.html", user_id = user_id)
+    else:
+        return render_template("home.html", user_id = user_id)
 
 @app.route("/register", methods=["POST", "GET"])
 def register():
@@ -51,5 +63,26 @@ def student_register(user_id):
                 db.session.add(new_phone)
         db.session.commit()
         return redirect(url_for("login"))
-    return render_template("student_register.html")
+
+@app.route("/company_registration/<int:user_id>", methods=["POST", "GET"])
+def company_registration(user_id):
+    if request.method == "POST":
+        name = request.form.get("name")
+        website = request.form.get("website")
+        cin = request.form.get("cin")
+        new_company = Company(company_id=user_id, name=name, website=website, cin=cin)
+        db.session.add(new_company)
+
+        phones = request.form.getlist('phone')
+        for phone in phones:
+            if phone.strip():
+                new_phone = CompanyPhone(company_id=user_id, phone=phone)
+                db.session.add(new_phone)
+        addresses = request.form.getlist("address")
+        for address in addresses:
+            if address.strip():
+                new_address = CompanyAddress(company_id=user_id, address=address)
+                db.session.add(new_address)
+        db.session.commit()
+        return redirect(url_for("login"))
     

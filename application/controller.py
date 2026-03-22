@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-from flask import current_app
+from flask import current_app as app
 from .models import *
 
 
@@ -10,7 +10,7 @@ def login():
         password = request.form.get("password")
         this_user = User.query.filter_by(email=email).first()
         if this_user.role == "admin" and this_user.password == password:
-            return redirect("/admin_dashboard")
+            return redirect("/admin_dashboard", user_id = this_user.id)
         else:
             if this_user and this_user.password == password:
                 return redirect(url_for("home", user_id = this_user.id))
@@ -19,9 +19,19 @@ def login():
                 return redirect(url_for("login"))
     return render_template("login.html")
 
-@app.route("/admin_dashboard")
-def admin_dashboard():
-    return render_template("admin_dashboard.html")
+@app.route("/admin_dashboard/<int:user_id>")
+def admin_dashboard(user_id):
+    this_user = User.query.filter_by(id=user_id).first()
+    if this_user.role != "admin":
+        flash("You are not authorized to access this page")
+        return redirect(url_for("login"))
+    all_students = Student.query.all()
+    all_companies = Company.query.filter_by(is_approved = true).all()
+    all_drives = Drive.query.all()
+    all_applications = Application.query.all()
+    company_requests = Company.query.filter_by(is_approved = false).all()
+    return render_template("admin_dashboard.html", all_students = all_students, all_companies = all_companies, all_drives = all_drives, all_applications = all_applications, company_requests = company_requests)
+
 
 @app.route("/home/<int:user_id>")
 def home(user_id):

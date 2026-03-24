@@ -96,3 +96,10 @@ def company_registration(user_id):
         db.session.commit()
         return redirect(url_for("login"))
     
+@app.route("/approve_company/<int:company_id>")
+def approve_company(company_id):
+    this_company = Company.query.filter_by(id=company_id).first()
+    this_company.is_approved = true
+    db.session.commit()
+    return redirect(url_for("admin_dashboard"))
+    

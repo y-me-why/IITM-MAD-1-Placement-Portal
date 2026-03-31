@@ -103,3 +103,37 @@ def approve_company(company_id):
     db.session.commit()
     return redirect(url_for("admin_dashboard"))
     
+@app.route("/reject_company/<int:company_id>")
+def reject_company(company_id):
+    this_company = Company.query.filter_by(id=company_id).first()
+    this_company.is_approved = false
+    db.session.commit()
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/blacklist_company/<int:company_id>")
+def blacklist_company(company_id):
+    this_company = Company.query.filter_by(id=company_id).first()
+    this_company.is_blacklisted = true
+    db.session.commit()
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/unblacklist_company/<int:company_id>")
+def unblacklist_company(company_id):
+    this_company = Company.query.filter_by(id=company_id).first()
+    this_company.is_blacklisted = false
+    db.session.commit()
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/blacklist_student/<int:student_id>")
+def blacklist_student(student_id):
+    this_student = Student.query.filter_by(id=student_id).first()
+    this_student.is_blacklisted = true
+    db.session.commit()
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/unblacklist_student/<int:student_id>")
+def unblacklist_student(student_id):
+    this_student = Student.query.filter_by(id=student_id).first()
+    this_student.is_blacklisted = false
+    db.session.commit()
+    return redirect(url_for("admin_dashboard")) 

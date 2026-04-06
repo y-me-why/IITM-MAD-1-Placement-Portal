@@ -34,13 +34,15 @@ class Drive(db.Model):
     eligibility = db.Column(db.Text, nullable=False)
     deadline = db.Column(db.DateTime, nullable=False)
     status = db.Column(db.String(20), default="Upcoming")
+    approval = db.Column(db.Boolean, default=False)
 
 class Application(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     student_id = db.Column(db.Integer, db.ForeignKey("student.student_id"), nullable=False)
     drive_id = db.Column(db.Integer, db.ForeignKey("drive.id"), nullable=False)
-    applied_on = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default="Applied")
+    student_status = db.Column(db.String(20), default="Applied")
+    company_status = db.Column(db.String(20), default="Pending")
+
 
 # Login tables cannot contain multivalued entities, using separate tables for the db to be normal and to store multivalured values
 class StudentPhone(db.Model):

@@ -7,13 +7,13 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(80), nullable=False)
     role = db.Column(db.String(20), nullable=False)
+    is_blacklisted = db.Column(db.Boolean, default=False)
 
 class Student(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
     name = db.Column(db.String(80), nullable = False)
     yoe = db.Column(db.Integer, nullable=False)
     resume = db.Column(db.String(255), nullable=True) 
-    is_blacklisted = db.Column(db.Boolean, default=False)
     about = db.Column(db.String(255), nullable=True)
 
 class Company(db.Model):
@@ -22,7 +22,6 @@ class Company(db.Model):
     website = db.Column(db.String(120), nullable=False)
     cin = db.Column(db.String(21), nullable=False)
     is_approved = db.Column(db.Boolean, default=False)
-    is_blacklisted = db.Column(db.Boolean, default=False)
 
 #Tables used for drive and application functionality
 class Drive(db.Model):

@@ -3,6 +3,17 @@ from flask import current_app as app
 from .models import *
 from .database import db
 
+@app.route("/")
+def home():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+        
+    if session["role"] == "student":
+        return redirect(url_for("student_dashboard"))
+    elif session["role"] == "company":
+        return redirect(url_for("company_dashboard"))
+    else:
+        return redirect(url_for("admin_dashboard"))
 # Authentication
 @app.route("/login", methods=["POST", "GET"])
 def login():
@@ -107,17 +118,6 @@ def company_registration():
         
     return render_template("company_register.html")
 
-@app.route("/home")
-def home():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-        
-    if session["role"] == "student":
-        return redirect(url_for("student_dashboard"))
-    elif session["role"] == "company":
-        return redirect(url_for("company_dashboard"))
-    else:
-        return redirect(url_for("admin_dashboard"))
 
 
 

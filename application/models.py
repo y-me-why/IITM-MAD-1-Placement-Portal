@@ -1,7 +1,6 @@
 from .database import db
 from datetime import datetime
 
-#Tables used for login details
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -23,7 +22,6 @@ class Company(db.Model):
     cin = db.Column(db.String(21), nullable=False)
     is_approved = db.Column(db.Boolean, default=False)
 
-#Tables used for drive and application functionality
 class Drive(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     company_id = db.Column(db.Integer, db.ForeignKey("company.company_id"), nullable=False)
@@ -35,6 +33,8 @@ class Drive(db.Model):
     status = db.Column(db.String(20), default="Upcoming")
     approval = db.Column(db.Boolean, default=False)
 
+    company = db.relationship('Company', backref='drives')
+
 class Application(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     student_id = db.Column(db.Integer, db.ForeignKey("student.student_id"), nullable=False)
@@ -42,12 +42,9 @@ class Application(db.Model):
     student_status = db.Column(db.String(20), default="Applied")
     company_status = db.Column(db.String(20), default="Pending")
 
+    drive = db.relationship('Drive', backref='applications')
+    student = db.relationship('Student', backref='applications')
 
-# Login tables cannot contain multivalued entities, using separate tables for the db to be normal and to store multivalured values
-class StudentPhone(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    student_id = db.Column(db.Integer, db.ForeignKey("student.student_id"), nullable=False)
-    phone = db.Column(db.String(20), nullable=False)
 
 class CompanyPhone(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -58,18 +55,3 @@ class CompanyAddress(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     company_id = db.Column(db.Integer, db.ForeignKey("company.company_id"), nullable=False)
     address = db.Column(db.String(255), nullable=False)
-
-class StudentSkills(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    student_id = db.Column(db.Integer, db.ForeignKey("student.student_id"), nullable=False)
-    skill = db.Column(db.String(80), nullable=False)
-
-class StudentEducation(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    student_id = db.Column(db.Integer, db.ForeignKey("student.student_id"), nullable=False)
-    education = db.Column(db.String(80), nullable=False)
-
-class StudentProjects(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    student_id = db.Column(db.Integer, db.ForeignKey("student.student_id"), nullable=False)
-    project = db.Column(db.String(80), nullable=False)

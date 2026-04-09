@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Search Results</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="main">
+        <div id="canvas" class="overflow-auto">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="#">Search Results</a>
+                    <div class="collapse navbar-collapse">
+                        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                            <li class="nav-item">
+                                <a class="nav-link text-primary fw-bold" href="/admin_dashboard">Go Back</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <div id="content" class="p-4">
+                <h3 class="headings">Search Results</h3>
+                <div class="border" style="max-height:400px; overflow-y: scroll;">
+                    <table class="table text-center align-middle">
+                        
+                        {% if results and results[0].company_id %}
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Company Name</th>
+                                    <th>CIN</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for company in results %}
+                                <tr>
+                                    <th>{{ company.company_id }}</th>
+                                    <td>{{ company.name }}</td>
+                                    <td>{{ company.cin }}</td>
+                                    <td>
+                                        <a href="/delete_user/{{ company.company_id }}" class="btn btn-sm btn-danger mx-1">Delete</a>
+                                        <a href="/blacklist_user/{{ company.company_id }}" class="btn btn-sm btn-dark mx-1">Blacklist</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+
+                        {% elif results and results[0].student_id %}
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Student Name</th>
+                                    <th>Grad Year</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in results %}
+                                <tr>
+                                    <th>{{ student.student_id }}</th>
+                                    <td>{{ student.name }}</td>
+                                    <td>{{ student.yoe }}</td>
+                                    <td>
+                                        <a href="/delete_user/{{ student.student_id }}" class="btn btn-sm btn-danger mx-1">Delete</a>
+                                        <a href="/blacklist_user/{{ student.student_id }}" class="btn btn-sm btn-dark mx-1">Blacklist</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            
+                        {% else %}
+                            <tbody>
+                                <tr><td class="p-4 fs-5 text-muted">No results found for your search.</td></tr>
+                            </tbody>
+                        {% endif %}
+
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,9 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, session
 from flask import current_app as app
 from .models import *
 from .database import db
+from datetime import datetime
 
 @app.route("/")
+@app.route("/home")
 def home():
     if "user_id" not in session:
         return redirect(url_for("login"))
@@ -14,6 +16,7 @@ def home():
         return redirect(url_for("company_dashboard"))
     else:
         return redirect(url_for("admin_dashboard"))
+
 # Authentication
 @app.route("/login", methods=["POST", "GET"])
 def login():
@@ -23,8 +26,7 @@ def login():
         this_user = User.query.filter_by(email=email).first()
         
         if this_user is None or this_user.password != password:
-            flash("Invalid credentials")
-            return redirect(url_for("login"))
+            return render_template("error.html", message="Invalid email or password.", link="/login")
             
         session["user_id"] = this_user.id
         session["role"] = this_user.role
@@ -44,8 +46,7 @@ def register():
         role = request.form.get("role")
         
         if User.query.filter_by(email=email).first():
-            flash("Email already registered")
-            return redirect(url_for("register"))
+            return render_template("error.html", message="This email is already registered.", link="/register")
 
         new_user = User(password=password, email=email, role=role)
         db.session.add(new_user)
@@ -64,7 +65,7 @@ def register():
 @app.route("/student_register", methods=["POST", "GET"])
 def student_register():
     if "user_id" not in session or session.get("role") != "student":
-        return redirect(url_for("login"))
+        return render_template("error.html", message="Unauthorized access.", link="/login")
         
     user_id = session["user_id"]
     
@@ -76,13 +77,7 @@ def student_register():
         
         new_student = Student(student_id=user_id, name=name, yoe=yoe, resume=resume, about=about)
         db.session.add(new_student)
-
-        phones = request.form.getlist('phone')
-        for phone in phones:
-            if phone.strip():
-                new_phone = StudentPhone(student_id=user_id, phone=phone)
-                db.session.add(new_phone)
-        db.session.commit()
+        db.session.commit() # Phone saving logic removed!
         return redirect(url_for("home"))
         
     return render_template("student_register.html")
@@ -90,7 +85,7 @@ def student_register():
 @app.route("/company_registration", methods=["POST", "GET"])
 def company_registration():
     if "user_id" not in session or session.get("role") != "company":
-        return redirect(url_for("login"))
+        return render_template("error.html", message="Unauthorized access.", link="/login")
         
     user_id = session["user_id"]
     
@@ -114,19 +109,15 @@ def company_registration():
                 new_address = CompanyAddress(company_id=user_id, address=address)
                 db.session.add(new_address)
         db.session.commit()
-        return redirect(url_for("home"))
+        return render_template("success.html", message="Registration complete! Please wait for Admin approval.", link="/login")
         
     return render_template("company_register.html")
-
-
-
 
 # Admin functions
 @app.route("/admin_dashboard")
 def admin_dashboard():
     if "user_id" not in session or session.get("role") != "admin":
-        flash("You are not logged in")
-        return redirect(url_for("login"))
+        return render_template("error.html", message="You must be an admin to view this page.", link="/login")
         
     all_students = Student.query.all()
     all_companies = Company.query.filter_by(is_approved=True).all()
@@ -137,9 +128,9 @@ def admin_dashboard():
     
     return render_template("admin_dashboard.html", all_students=all_students, all_companies=all_companies, accepted_drives=accepted_drives, pendingApprovalDrives=pendingApprovalDrives, all_applications=all_applications, company_requests=company_requests)
 
-@app.route("/company_status/<int:company_id>")
+@app.route("/company_status/<int:company_id>", methods=["POST"])
 def company_status(company_id):
-    if session.get("role") != "admin": return redirect(url_for("login"))
+    if session.get("role") != "admin": return render_template("error.html", message="Unauthorized.", link="/login")
     this_company = Company.query.filter_by(company_id=company_id).first()
     selected_option = request.form.get("selected_option")
     if this_company and selected_option == "approve":
@@ -150,43 +141,9 @@ def company_status(company_id):
         db.session.commit()
     return redirect(url_for("admin_dashboard"))
 
-@app.route("/blacklist_user/<int:user_id>")
-def blacklist_user(user_id):
-    if session.get("role") != "admin": return redirect(url_for("login"))
-    this_user = User.query.filter_by(id=user_id).first()
-    if this_user:
-        this_user.is_blacklisted = True
-        db.session.commit()
-    return redirect(url_for("admin_dashboard"))
-
-@app.route("/unblacklist_user/<int:user_id>")
-def unblacklist_user(user_id):
-    if session.get("role") != "admin": return redirect(url_for("login"))
-    this_user = User.query.filter_by(id=user_id).first()
-    if this_user:
-        this_user.is_blacklisted = False
-        db.session.commit()
-    return redirect(url_for("admin_dashboard"))
-
-@app.route("/search", methods=["POST", "GET"])
-def search():
-    user_id = session.get("user_id")
-    role = session.get("role")
-    if role != "admin": return redirect(url_for("login"))
-    if request.method == "POST":
-        search_word = request.form.get("search_word")
-        key = request.form.get("key")
-        if key == "company":
-            found_companies = Company.query.filter(Company.name.ilike(f"%{search_word}%")).all()
-            return render_template("result.html", results=found_companies)
-        elif key == "student":
-            found_students = Student.query.filter(Student.name.ilike(f"%{search_word}%")).all()
-            return render_template("result.html", results=found_students)
-    return redirect(url_for("admin_dashboard"))
-
-@app.route("/drive_status/<int:drive_id>")
+@app.route("/drive_status/<int:drive_id>", methods=["POST"])
 def drive_status(drive_id):
-    if session.get("role") != "admin": return redirect(url_for("login"))
+    if session.get("role") != "admin": return render_template("error.html", message="Unauthorized.", link="/login")
     this_drive = Drive.query.filter_by(id=drive_id).first()
     selected_option = request.form.get("selected_option")
     if this_drive and selected_option == "approve":
@@ -197,29 +154,108 @@ def drive_status(drive_id):
         db.session.commit()
     return redirect(request.referrer or url_for("admin_dashboard"))
 
+@app.route("/blacklist_user/<int:user_id>")
+def blacklist_user(user_id):
+    if session.get("role") != "admin": return render_template("error.html", message="Unauthorized.", link="/login")
+    this_user = User.query.filter_by(id=user_id).first()
+    if this_user:
+        this_user.is_blacklisted = True
+        db.session.commit()
+    return redirect(url_for("admin_dashboard"))
 
+@app.route("/unblacklist_user/<int:user_id>")
+def unblacklist_user(user_id):
+    if session.get("role") != "admin": return render_template("error.html", message="Unauthorized.", link="/login")
+    this_user = User.query.filter_by(id=user_id).first()
+    if this_user:
+        this_user.is_blacklisted = False
+        db.session.commit()
+    return redirect(url_for("admin_dashboard"))
 
+@app.route("/delete_user/<int:user_id>")
+def delete_user(user_id):
+    if session.get("role") != "admin": return render_template("error.html", message="Unauthorized.", link="/login")
+    
+    user_to_delete = User.query.get(user_id)
+    if not user_to_delete: return redirect(url_for("admin_dashboard"))
+        
+    if user_to_delete.role == "student":
+        Application.query.filter_by(student_id=user_id).delete()
+        Student.query.filter_by(student_id=user_id).delete()
+        
+    elif user_to_delete.role == "company":
+        Drive.query.filter_by(company_id=user_id).delete()
+        CompanyAddress.query.filter_by(company_id=user_id).delete()
+        CompanyPhone.query.filter_by(company_id=user_id).delete()
+        Company.query.filter_by(company_id=user_id).delete()
+        
+    db.session.delete(user_to_delete)
+    db.session.commit()
+    
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/search", methods=["POST", "GET"])
+def search():
+    user_id = session.get("user_id")
+    role = session.get("role")
+    if role != "admin": return render_template("error.html", message="Unauthorized.", link="/login")
+    
+    if request.method == "POST":
+        search_word = request.form.get("search_word")
+        key = request.form.get("key")
+        
+        if key == "company":
+            found_companies = Company.query.filter(Company.name.ilike(f"%{search_word}%")).all()
+            return render_template("result.html", results=found_companies)
+            
+        elif key == "student":
+            search_pattern = f"%{search_word}%"
+            search_id = int(search_word) if search_word.isdigit() else -1
+            
+            # Cleaned up query: now searches purely by ID or Name
+            found_students = Student.query.filter(
+                db.or_(
+                    Student.name.ilike(search_pattern),
+                    Student.student_id == search_id
+                )
+            ).all()
+            return render_template("result.html", results=found_students)
+            
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin_delete_drive/<int:drive_id>")
+def admin_delete_drive(drive_id):
+    if session.get("role") != "admin": 
+        return render_template("error.html", message="Unauthorized.", link="/login")
+        
+    this_drive = Drive.query.filter_by(id=drive_id).first()
+    if this_drive:
+        # Delete associated student applications first so the database doesn't crash
+        Application.query.filter_by(drive_id=drive_id).delete()
+        db.session.delete(this_drive)
+        db.session.commit()
+        
+    return redirect(url_for("admin_dashboard"))
 
 # Company functions
 @app.route("/company_dashboard")
 def company_dashboard():
     if "user_id" not in session or session.get("role") != "company":
-        return redirect(url_for("login"))
+        return render_template("error.html", message="Unauthorized access.", link="/login")
         
     company_id = session["user_id"]
     this_company = Company.query.filter_by(company_id=company_id).first()
     this_user = User.query.filter_by(id=company_id).first()
     
     if not this_company.is_approved or this_user.is_blacklisted:
-        flash("Your account is pending admin approval or has been blacklisted.")
-        return render_template("waiting_approval.html") 
+        return render_template("error.html", message="Your account is pending admin approval or has been blacklisted.", link="/login") 
         
     all_drives = Drive.query.filter_by(company_id=company_id).all()
     return render_template("company_dashboard.html", all_drives=all_drives, company=this_company)
 
 @app.route("/create_drive", methods=["POST", "GET"])
 def create_drive():
-    if "user_id" not in session or session.get("role") != "company": return redirect(url_for("login"))
+    if "user_id" not in session or session.get("role") != "company": return render_template("error.html", message="Unauthorized.", link="/login")
     company_id = session["user_id"]
     this_user = User.query.filter_by(id=company_id).first()
     this_company = Company.query.filter_by(company_id=company_id).first()
@@ -233,20 +269,19 @@ def create_drive():
         eligibility = request.form.get("eligibility")
         status = request.form.get("status")
         
-        from datetime import datetime
         deadline_str = request.form.get("deadline")
         deadline = datetime.strptime(deadline_str, '%Y-%m-%dT%H:%M')
 
         new_drive = Drive(company_id=company_id, drive_name=drive_name, job_title=job_title, description=description, eligibility=eligibility, deadline=deadline, status=status)
         db.session.add(new_drive)
         db.session.commit()
-        return redirect(url_for("company_dashboard"))
+        return render_template("success.html", message="Drive created successfully!", link="/company_dashboard")
         
     return render_template("create_drive.html")
 
 @app.route("/view_applications/<int:drive_id>")
 def view_applications(drive_id):
-    if session.get("role") != "company": return redirect(url_for("login"))
+    if session.get("role") != "company": return render_template("error.html", message="Unauthorized.", link="/login")
     this_drive = Drive.query.filter_by(id=drive_id).first()
     if this_drive and this_drive.company_id == session["user_id"]:
         applications = Application.query.filter_by(drive_id=drive_id).all()
@@ -255,7 +290,7 @@ def view_applications(drive_id):
 
 @app.route("/update_application/<int:application_id>", methods=["POST"])
 def update_application(application_id):
-    if session.get("role") != "company": return redirect(url_for("login"))
+    if session.get("role") != "company": return render_template("error.html", message="Unauthorized.", link="/login")
     this_application = Application.query.get(application_id)
     
     if this_application and this_application.drive.company_id == session["user_id"]:
@@ -265,12 +300,11 @@ def update_application(application_id):
 
 @app.route("/edit_drive/<int:drive_id>", methods=["POST", "GET"])
 def edit_drive(drive_id):
-    if session.get("role") != "company": return redirect(url_for("login"))
+    if session.get("role") != "company": return render_template("error.html", message="Unauthorized.", link="/login")
     this_drive = Drive.query.filter_by(id=drive_id).first()
     
     if not this_drive or this_drive.company_id != session["user_id"]:
-        flash("Unauthorized access")
-        return redirect(url_for("company_dashboard"))
+        return render_template("error.html", message="You do not have permission to edit this drive.", link="/company_dashboard")
 
     if request.method == "POST":
         this_drive.drive_name = request.form.get("drive_name")
@@ -279,13 +313,13 @@ def edit_drive(drive_id):
         this_drive.eligibility = request.form.get("eligibility")
         this_drive.status = request.form.get("status") 
         db.session.commit()
-        return redirect(url_for("company_dashboard"))
+        return render_template("success.html", message="Drive updated successfully!", link="/company_dashboard")
         
     return render_template("edit_drive.html", drive=this_drive)
 
 @app.route("/delete_drive/<int:drive_id>")
 def delete_drive(drive_id):
-    if session.get("role") != "company": return redirect(url_for("login"))
+    if session.get("role") != "company": return render_template("error.html", message="Unauthorized.", link="/login")
     this_drive = Drive.query.filter_by(id=drive_id).first()
     
     if this_drive and this_drive.company_id == session["user_id"]:
@@ -295,22 +329,18 @@ def delete_drive(drive_id):
         
     return redirect(url_for("company_dashboard"))
 
-
-
-
 # Student functions
 @app.route("/student_dashboard")
 def student_dashboard():
     if "user_id" not in session or session.get("role") != "student":
-        return redirect(url_for("login"))
+        return render_template("error.html", message="Unauthorized access.", link="/login")
         
     student_id = session["user_id"]
     this_student = Student.query.filter_by(student_id=student_id).first()
     this_user = User.query.filter_by(id=student_id).first()
     
     if this_user.is_blacklisted:
-        flash("Your account has been blacklisted.")
-        return render_template("blacklisted.html")
+        return render_template("error.html", message="Your account has been blacklisted by the administration.", link="/login")
  
     applied_drives_subquery = [app.drive_id for app in Application.query.filter_by(student_id=student_id).all()]
     
@@ -328,32 +358,34 @@ def student_dashboard():
 def apply_drive(drive_id):
     user_id = session.get("user_id")
     this_user = User.query.filter_by(id=user_id).first()
-    if session.get("role") != "student" or this_user.is_blacklisted: return redirect(url_for("login"))
+    if session.get("role") != "student" or this_user.is_blacklisted: 
+        return render_template("error.html", message="Unauthorized or blacklisted.", link="/login")
+    
     student_id = session["user_id"]
     
     existing_app = Application.query.filter_by(student_id=student_id, drive_id=drive_id).first()
     this_drive = Drive.query.filter_by(id=drive_id).first()
 
     if not this_drive or this_drive.approval == False:
-        flash("Drive does not exist")
-        return redirect(url_for("student_dashboard"))
+        return render_template("error.html", message="This drive does not exist or has not been approved.", link="/student_dashboard")
     if this_drive.status == "Closed":
-        flash("Drive is closed")
-        return redirect(url_for("student_dashboard"))
+        return render_template("error.html", message="This placement drive is closed.", link="/student_dashboard")
+    if existing_app:
+        return render_template("error.html", message="You have already applied to this drive.", link="/student_dashboard")
 
-    if not existing_app:
-        new_application = Application(student_id=student_id, drive_id=drive_id)
-        db.session.add(new_application)
-        db.session.commit()
-        flash("Application successful!")
+    new_application = Application(student_id=student_id, drive_id=drive_id)
+    db.session.add(new_application)
+    db.session.commit()
         
-    return redirect(request.referrer or url_for("student_dashboard"))
+    return render_template("success.html", message="Successfully applied to the drive!", link="/student_dashboard")
 
 @app.route("/update_student_profile", methods=["POST", "GET"])
 def update_student_profile():
     user_id = session.get("user_id")
     this_user = User.query.filter_by(id=user_id).first()
-    if session.get("role") != "student" or this_user.is_blacklisted: return redirect(url_for("login"))
+    if session.get("role") != "student" or this_user.is_blacklisted: 
+        return render_template("error.html", message="Unauthorized or blacklisted.", link="/login")
+        
     student_id = session["user_id"]
     this_student = Student.query.filter_by(student_id=student_id).first()
     
@@ -362,7 +394,6 @@ def update_student_profile():
         this_student.resume = request.form.get("resume")
         this_student.about = request.form.get("about")
         db.session.commit()
-        flash("Profile updated")
-        return redirect(url_for("student_dashboard"))
+        return render_template("success.html", message="Profile updated successfully!", link="/student_dashboard")
         
     return render_template("update_student_profile.html", student=this_student)

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="main">
+        <div id="canvas" class="overflow-auto">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="#">Welcome Admin!</a>
+                    <div class="collapse navbar-collapse">
+                        
+                        <form class="d-flex mx-auto" action="/search" method="POST">
+                            <input class="form-control me-2" type="search" placeholder="Search by name..." name="search_word" required>
+                            <select class="form-select me-2" name="key" required>
+                                <option value="student">Student</option>
+                                <option value="company">Company</option>
+                            </select>
+                            <button class="btn btn-outline-success" type="submit">Search</button>
+                        </form>
+
+                        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                            <li class="nav-item"><a class="nav-link text-danger fw-bold" href="/login">Log Out</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <div id="content" class="p-3">
+                <div class="row text-center mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white p-3 shadow-sm">
+                            <h5>Total Students</h5>
+                            <h2>{{ all_students|length }}</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white p-3 shadow-sm">
+                            <h5>Total Companies</h5>
+                            <h2>{{ all_companies|length }}</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-dark p-3 shadow-sm">
+                            <h5>Total Drives</h5>
+                            <h2>{{ accepted_drives|length + pendingApprovalDrives|length }}</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white p-3 shadow-sm">
+                            <h5>Total Applications</h5>
+                            <h2>{{ all_applications|length }}</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="headings mt-2">Pending Company Approvals</h3>
+                <div class="border" style="max-height:200px; overflow-y: scroll;">
+                    <table class="table text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Company Name</th>
+                                <th>CIN</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for company in company_requests %}
+                            <tr>
+                                <th>{{ company.company_id }}</th>
+                                <td>{{ company.name }}</td>
+                                <td>{{ company.cin }}</td>
+                                <td>
+                                    <form action="/company_status/{{ company.company_id }}" method="POST" class="d-flex justify-content-center m-0">
+                                        <select name="selected_option" class="form-select form-select-sm w-auto me-2">
+                                            <option value="approve">Approve</option>
+                                            <option value="reject">Reject</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4">No pending company requests.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="headings mt-4">Pending Drive Approvals</h3>
+                <div class="border" style="max-height:200px; overflow-y: scroll;">
+                    <table class="table text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Job Title</th>
+                                <th>Deadline</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for drive in pendingApprovalDrives %}
+                            <tr>
+                                <th>{{ drive.id }}</th>
+                                <td>{{ drive.job_title }}</td>
+                                <td>{{ drive.deadline.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <form action="/drive_status/{{ drive.id }}" method="POST" class="d-flex justify-content-center m-0">
+                                        <select name="selected_option" class="form-select form-select-sm w-auto me-2">
+                                            <option value="approve">Approve</option>
+                                            <option value="reject">Reject</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        <a href="/admin_delete_drive/{{ drive.id }}" class="btn btn-sm btn-danger ms-2">Delete</a>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4">No pending drive requests.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="headings mt-4">Manage Students</h3>
+                <div class="border" style="max-height:200px; overflow-y: scroll;">
+                    <table class="table text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Grad Year</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in all_students %}
+                            <tr>
+                                <th>{{ student.student_id }}</th>
+                                <td>{{ student.name }}</td>
+                                <td>{{ student.yoe }}</td>
+                                <td>
+                                    <a href="/delete_user/{{ student.student_id }}" class="btn btn-sm btn-danger mx-1">Delete</a>
+                                    <a href="/blacklist_user/{{ student.student_id }}" class="btn btn-sm btn-dark mx-1">Blacklist</a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4">No registered students yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="headings mt-4">Manage Approved Companies</h3>
+                <div class="border" style="max-height:200px; overflow-y: scroll;">
+                    <table class="table text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Company Name</th>
+                                <th>CIN</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for company in all_companies %}
+                            <tr>
+                                <th>{{ company.company_id }}</th>
+                                <td>{{ company.name }}</td>
+                                <td>{{ company.cin }}</td>
+                                <td>
+                                    <a href="/delete_user/{{ company.company_id }}" class="btn btn-sm btn-danger mx-1">Delete</a>
+                                    <a href="/blacklist_user/{{ company.company_id }}" class="btn btn-sm btn-dark mx-1">Blacklist</a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4">No approved companies yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="headings mt-4">Manage Approved Drives</h3>
+                <div class="border mb-4" style="max-height:200px; overflow-y: scroll;">
+                    <table class="table text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Company ID</th>
+                                <th>Job Title</th>
+                                <th>Deadline</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for drive in accepted_drives %}
+                            <tr>
+                                <th>{{ drive.id }}</th>
+                                <td>{{ drive.company.name }}</td>
+                                <td>{{ drive.job_title }}</td>
+                                <td>{{ drive.deadline.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <form action="/drive_status/{{ drive.id }}" method="POST" class="d-flex justify-content-center m-0">
+                                        <select name="selected_option" class="form-select form-select-sm w-auto me-2">
+                                            <option value="approve" selected>Approved</option>
+                                            <option value="reject">Reject</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        <a href="/admin_delete_drive/{{ drive.id }}" class="btn btn-sm btn-danger ms-2">Delete</a>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5">No approved drives yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>
